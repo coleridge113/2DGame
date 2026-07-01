@@ -5,6 +5,30 @@
 #include <glm/glm.hpp>
 #include <vector>
 
+enum class PlayerState
+{
+    idle, running, jumping
+};
+
+struct PlayerData
+{
+    PlayerState state;
+    PlayerData()
+    {
+        state = PlayerState::idle;
+    }
+};
+
+struct LevelData {};
+struct EnemyData {};
+
+union ObjectData
+{
+    PlayerData player;
+    LevelData level;
+    EnemyData enemy;
+};
+
 enum class ObjectType
 {
     player, level, enemy
@@ -13,6 +37,7 @@ enum class ObjectType
 struct GameObject
 {
     ObjectType type;
+    ObjectData data;
     glm::vec2 position, velocity, acceleration;
     float direction;
     std::vector<Animation> animations;
@@ -20,7 +45,7 @@ struct GameObject
     SDL_Texture *texture;
 
 
-    GameObject()
+    GameObject() : data{.level = LevelData()}
     {
         type = ObjectType::level;
         direction = 1;

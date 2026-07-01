@@ -98,6 +98,7 @@ int main()
     player.texture = res.texIdle;
     player.animations = res.playerAnims;
     player.currentAnimation = res.ANIM_PLAYER_IDLE;
+    player.position = glm::vec2(0.0f, state.logH - 32.0f);
 
     gs.layers[LAYER_IDX_CHARACTERS].push_back(player);
 
@@ -134,7 +135,7 @@ int main()
         SDL_SetRenderDrawColor(state.renderer, 20, 10, 30, 255);
         SDL_RenderClear(state.renderer);
 
-        // update all objects
+        // update and draw all objects
         for (auto& layer : gs.layers)
         {
             for (GameObject& obj : layer)
@@ -143,6 +144,7 @@ int main()
                 {
                     obj.animations[obj.currentAnimation].step(deltaTime);
                 }
+                drawObject(state, gs, obj, deltaTime);
             }
         }
 
@@ -217,7 +219,7 @@ void drawObject(const SDLState& state, GameState& gs, GameObject& obj, float del
 
     SDL_FRect dst{
         .x = obj.position.x,
-        .y = obj.position.y,
+        .y = 0,
         .w = spriteSize,
         .h = spriteSize
     };
