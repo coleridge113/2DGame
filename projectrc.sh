@@ -7,3 +7,7 @@ alias prun="cmake --build --preset default --target run"
 function pall() {
     pset && pbuild && prun
 }
+
+function pclean() {
+    rm -rf build/
+}

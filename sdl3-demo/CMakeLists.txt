@@ -6,7 +6,11 @@ find_package(SDL3_image REQUIRED)
 add_executable(sdl3-demo "sdl3-demo.cpp")
 
 target_compile_features(sdl3-demo PRIVATE cxx_std_20)
-target_link_libraries(sdl3-demo PRIVATE SDL3::SDL3 SDL3_image::SDL3_image)
+target_include_directories(sdl3-demo PRIVATE /opt/homebrew/include)
+target_link_libraries(sdl3-demo PRIVATE 
+    SDL3::SDL3 
+    SDL3_image::SDL3_image
+)
 
 add_custom_target(run
     COMMAND sdl3-demo

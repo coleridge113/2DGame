@@ -15,7 +15,7 @@ class Animation
 
         float getLength() const { return timer.getLength(); }
         void step (float deltaTime) { timer.step(deltaTime); }
-        int currentFrame() const
+        int getCurrentFrame() const
         {
             return static_cast<int>(timer.getTime() / timer.getLength() * frameCount);
         }
