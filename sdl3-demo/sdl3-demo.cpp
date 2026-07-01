@@ -87,9 +87,9 @@ bool initialize(SDLState& state);
 void drawObject(const SDLState& state, GameState& gs, GameObject& obj, float deltaTime);
 void update(const SDLState& state, GameState& gs, Resources& res, GameObject& obj, float deltaTime);
 void createTiles(const SDLState& state, GameState& gs, const Resources& res);
-void checkCollision(const SDLState& state, GameState& gs, const Resources& res, GameObject& a, GameObject& b, float deltaTime);
+void checkCollision(const SDLState& state, GameState& gs, Resources& res, GameObject& a, GameObject& b, float deltaTime);
 void collisionResponse(
-        const SDLState& state, GameState& gs, const Resources& res, 
+        const SDLState& state, GameState& gs, Resources& res, 
         const SDL_FRect& rectA, const SDL_FRect& rectB, const SDL_FRect& rectC,
         GameObject& a, GameObject& b, float deltaTime
         );
@@ -318,7 +318,7 @@ void update(const SDLState& state, GameState& gs, Resources& res, GameObject& ob
     }
 }
 
-void collisionResponse(const SDLState& state, GameState& gs, const Resources& res, 
+void collisionResponse(const SDLState& state, GameState& gs, Resources& res, 
         const SDL_FRect& rectA, const SDL_FRect& rectB, const SDL_FRect& rectC,
         GameObject& a, GameObject& b, float deltaTime)
 {
@@ -333,7 +333,7 @@ void collisionResponse(const SDLState& state, GameState& gs, const Resources& re
                 {
                     if (a.velocity.x > 0) // going right
                     {
-                        a.position.x -= rectC.w;
+                        a.position.x -= rectC.w + 0.1f;
                     }
                     else if (a.velocity.x < 0) // going left
                     {
@@ -356,11 +356,14 @@ void collisionResponse(const SDLState& state, GameState& gs, const Resources& re
                 }
                 break;
             }
+            
+            case ObjectType::player:    break;
+            case ObjectType::enemy:     break;
         }
     }
 }
 
-void checkCollision(const SDLState& state, GameState& gs, const Resources& res, 
+void checkCollision(const SDLState& state, GameState& gs, Resources& res, 
         GameObject& a, GameObject& b, float deltaTime)
 {
     SDL_FRect rectA{
