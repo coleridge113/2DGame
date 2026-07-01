@@ -3,8 +3,8 @@
 #include "SDL3/SDL_messagebox.h"
 #include "SDL3/SDL_render.h"
 #include "SDL3/SDL_video.h"
+#include <SDL3_image/SDL_image.h>
 #include <SDL3/SDL.h>
-#include <iostream>
 
 
 struct SDLState
@@ -47,6 +47,9 @@ int main()
         return 1;
     }
 
+    // load game assets
+    SDL_Texture *idleTex = IMG_LoadTexture(state.renderer, "data/idle.png");
+
     // start game loop
     bool running = true;
     while (running)
@@ -65,9 +68,14 @@ int main()
         // perform drawing commands
         SDL_SetRenderDrawColor(state.renderer, 255, 255, 255, 255);
         SDL_RenderClear(state.renderer);
+
+        SDL_RenderTexture(state.renderer, idleTex, nullptr, nullptr);
+
+        // swap buffers 
         SDL_RenderPresent(state.renderer);
     }
 
+    SDL_DestroyTexture(idleTex);
     cleanup(state);
 
     return 0;
