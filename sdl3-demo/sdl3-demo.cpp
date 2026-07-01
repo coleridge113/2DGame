@@ -87,6 +87,12 @@ bool initialize(SDLState& state);
 void drawObject(const SDLState& state, GameState& gs, GameObject& obj, float deltaTime);
 void update(const SDLState& state, GameState& gs, Resources& res, GameObject& obj, float deltaTime);
 void createTiles(const SDLState& state, GameState& gs, const Resources& res);
+void checkCollision(const SDLState& state, GameState& gs, const Resources& res, GameObject& a, GameObject& b, float deltaTime);
+void collisionResponse(
+        const SDLState& state, GameState& gs, const Resources& res, 
+        const SDL_FRect& rectA, const SDL_FRect& rectB, const SDL_FRect& rectC,
+        GameObject& a, GameObject& b, float deltaTime
+        );
 
 
 int main()
@@ -298,6 +304,81 @@ void update(const SDLState& state, GameState& gs, Resources& res, GameObject& ob
 
     // add velocity position
     obj.position += obj.velocity * deltaTime;
+
+    // handle collision detection
+    for (auto& layer : gs.layers)
+    {
+        for (GameObject& objB : layer)
+        {
+            if (&obj != &objB)
+            {
+                checkCollision(state, gs, res, obj, objB, deltaTime);
+            }
+        }
+    }
+}
+
+void collisionResponse(const SDLState& state, GameState& gs, const Resources& res, 
+        const SDL_FRect& rectA, const SDL_FRect& rectB, const SDL_FRect& rectC,
+        GameObject& a, GameObject& b, float deltaTime)
+{
+    if (a.type == ObjectType::player)
+    {
+        switch (b.type)
+        {
+            case ObjectType::level:
+            {
+                // horizontal collision
+                if (rectC.w < rectC.h)
+                {
+                    if (a.velocity.x > 0) // going right
+                    {
+                        a.position.x -= rectC.w;
+                    }
+                    else if (a.velocity.x < 0) // going left
+                    {
+                        a.position.x += rectC.w;
+                    }
+                    a.velocity.x = 0;
+                }
+                else 
+                {
+                    // vertical collision
+                    if (a.velocity.y > 0) // going down
+                    {
+                        a.position.y -= rectC.h;
+                    }
+                    else if (a.velocity.y < 0)// going up
+                    {
+                        a.position.y += rectC.h;
+                    }
+                    a.velocity.y = 0;
+                }
+                break;
+            }
+        }
+    }
+}
+
+void checkCollision(const SDLState& state, GameState& gs, const Resources& res, 
+        GameObject& a, GameObject& b, float deltaTime)
+{
+    SDL_FRect rectA{
+        .x = a.position.x, .y = a.position.y,
+        .w = TILE_SIZE, .h = TILE_SIZE
+    };
+
+    SDL_FRect rectB{
+        .x = b.position.x, .y = b.position.y,
+        .w = TILE_SIZE, .h = TILE_SIZE
+    };
+
+    SDL_FRect rectC{ 0 };
+
+    if (SDL_GetRectIntersectionFloat(&rectA, &rectB, &rectC))
+    {
+        collisionResponse(state, gs, res, rectA, rectB, rectC, a, b, deltaTime);
+    }
 }
 
 void createTiles(const SDLState& state, GameState& gs, const Resources& res)
@@ -313,8 +394,8 @@ void createTiles(const SDLState& state, GameState& gs, const Resources& res)
     short map[MAP_ROWS][MAP_COLS] = { 
         4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
         0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
-        0, 0, 2, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
-        0, 2, 2, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
+        0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
+        0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
         1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
     };
 
