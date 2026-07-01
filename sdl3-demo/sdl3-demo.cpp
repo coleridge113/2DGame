@@ -101,6 +101,7 @@ int main()
     // create player object
     GameObject player; 
     player.type = ObjectType::player;
+    player.data.player = PlayerData();
     player.texture = res.texIdle;
     player.animations = res.playerAnims;
     player.currentAnimation = res.ANIM_PLAYER_IDLE;
@@ -253,6 +254,22 @@ void update(const SDLState& state, GameState& gs, Resources& res, GameObject& ob
                 if (currentDirection)
                 {
                     obj.data.player.state = PlayerState::running;
+                }
+                else
+                {
+                    if (obj.velocity.x)
+                    {
+                        const float factor = obj.velocity.x > 0 ? -1.5f : 1.5f;
+                        float amount = factor * obj.acceleration.x * deltaTime;
+                        if (std::abs(obj.velocity.x) < std::abs(amount))
+                        {
+                            obj.velocity.x = 0;
+                        }
+                        else
+                        {
+                            obj.velocity.x += amount;
+                        }
+                    }
                 }
                 break;
             }
