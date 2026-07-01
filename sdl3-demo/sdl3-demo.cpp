@@ -6,6 +6,9 @@
 #include <SDL3_image/SDL_image.h>
 #include <SDL3/SDL.h>
 #include <cstdint>
+#include <string>
+#include <vector>
+#include "animation.h"
 
 
 struct SDLState
@@ -17,6 +20,37 @@ struct SDLState
 
 void cleanup(SDLState& state);
 bool initialize(SDLState& state);
+
+struct Resources {
+    const int ANIM_PLAYER_IDLE = 0;
+    std::vector<Animation> playerAnims;
+    std::vector<SDL_Texture *> textures;
+    SDL_Texture *texIdle;
+
+    SDL_Texture *loadTexture(SDL_Renderer *renderer, const std::string &filepath)
+    {
+        SDL_Texture *tex = IMG_LoadTexture(renderer, filepath.c_str());
+        SDL_SetTextureScaleMode(tex, SDL_SCALEMODE_NEAREST);
+        textures.push_back(tex);
+        return tex;
+    }
+
+    void load(SDLState& state)
+    {
+        playerAnims.resize(5);
+        playerAnims[ANIM_PLAYER_IDLE] = Animation(8, 1.6f);
+
+        texIdle = loadTexture(state.renderer, "data/idle.png");
+    }
+
+    void unload()
+    {
+        for (SDL_Texture *tex : textures)
+        {
+            SDL_DestroyTexture(tex);
+        }
+    }
+};
 
 int main()
 {
@@ -32,8 +66,8 @@ int main()
     }
 
     // load game assets
-    SDL_Texture *idleTex = IMG_LoadTexture(state.renderer, "data/idle.png");
-    SDL_SetTextureScaleMode(idleTex, SDL_SCALEMODE_NEAREST);
+    Resources res;
+    res.load(state);
 
     // setup game data
     const bool *keys = SDL_GetKeyboardState(nullptr);
@@ -101,7 +135,7 @@ int main()
             .h = spriteSize
         };
 
-        SDL_RenderTextureRotated(state.renderer, idleTex, &src, &dst, 0, nullptr, 
+        SDL_RenderTextureRotated(state.renderer, res.texIdle, &src, &dst, 0, nullptr, 
                 (flipHorizontal) ? SDL_FLIP_HORIZONTAL : SDL_FLIP_NONE);
 
         // swap buffers and present
@@ -110,7 +144,7 @@ int main()
         prevTime = nowTime;
     }
 
-    SDL_DestroyTexture(idleTex);
+    res.unload();
     cleanup(state);
 
     return 0;
