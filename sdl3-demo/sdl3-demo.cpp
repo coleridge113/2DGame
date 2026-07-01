@@ -367,13 +367,17 @@ void checkCollision(const SDLState& state, GameState& gs, Resources& res,
         GameObject& a, GameObject& b, float deltaTime)
 {
     SDL_FRect rectA{
-        .x = a.position.x, .y = a.position.y,
-        .w = TILE_SIZE, .h = TILE_SIZE
+        .x = a.position.x + a.collider.x, 
+        .y = a.position.y + a.collider.y,
+        .w = a.collider.w, 
+        .h = a.collider.h
     };
 
     SDL_FRect rectB{
-        .x = b.position.x, .y = b.position.y,
-        .w = TILE_SIZE, .h = TILE_SIZE
+        .x = b.position.x + b.collider.x, 
+        .y = b.position.y + b.collider.y,
+        .w = b.collider.w, 
+        .h = b.collider.h
     };
 
     SDL_FRect rectC{ 0 };
@@ -395,8 +399,8 @@ void createTiles(const SDLState& state, GameState& gs, const Resources& res)
      * 6 - Brick
      */
     short map[MAP_ROWS][MAP_COLS] = { 
-        4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
-        0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
+        0, 4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
         0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
         0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
         1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
@@ -411,6 +415,7 @@ void createTiles(const SDLState& state, GameState& gs, const Resources& res)
                 state.logH - (MAP_ROWS - r) * TILE_SIZE
                 );
         o.texture = tex;
+        o.collider = { .x = 0, .y = 0, .w = TILE_SIZE, .h = TILE_SIZE };
         return o;
     };
 
@@ -444,6 +449,10 @@ void createTiles(const SDLState& state, GameState& gs, const Resources& res)
                     player.acceleration = glm::vec2(300, 0);
                     player.maxSpeedX = 100;
                     player.dynamic = true;
+                    player.collider = { 
+                        .x = 11, .y = 6,
+                        .w = 10, .h = 26
+                    };
                     gs.layers[LAYER_IDX_CHARACTERS].push_back(player);
                     break;
                 }
