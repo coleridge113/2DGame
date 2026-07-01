@@ -239,7 +239,9 @@ void drawObject(const SDLState& state, GameState& gs, GameObject& obj, float del
 
 void update(const SDLState& state, GameState& gs, Resources& res, GameObject& obj, float deltaTime)
 {
-    obj.velocity += glm::vec2(0, 500) * deltaTime;
+    if (obj.dynamic)
+        obj.velocity += glm::vec2(0, 500) * deltaTime;
+
     if (obj.type == ObjectType::player)
     {
         float currentDirection = 0;
@@ -292,10 +294,10 @@ void update(const SDLState& state, GameState& gs, Resources& res, GameObject& ob
         obj.velocity += currentDirection * obj.acceleration * deltaTime;
         if (std::abs(obj.velocity.x) > obj.maxSpeedX)
             obj.velocity.x = currentDirection * obj.maxSpeedX;
-
-        // add velocity position
-        obj.position += obj.velocity * deltaTime;
     }
+
+    // add velocity position
+    obj.position += obj.velocity * deltaTime;
 }
 
 void createTiles(const SDLState& state, GameState& gs, const Resources& res)
@@ -357,6 +359,7 @@ void createTiles(const SDLState& state, GameState& gs, const Resources& res)
                     player.currentAnimation = res.ANIM_PLAYER_IDLE;
                     player.acceleration = glm::vec2(300, 0);
                     player.maxSpeedX = 100;
+                    player.dynamic = true;
                     gs.layers[LAYER_IDX_CHARACTERS].push_back(player);
                     break;
                 }
