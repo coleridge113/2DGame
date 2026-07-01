@@ -1,14 +1,24 @@
 #include "SDL3/SDL_events.h"
 #include "SDL3/SDL_init.h"
 #include "SDL3/SDL_messagebox.h"
+#include "SDL3/SDL_render.h"
 #include "SDL3/SDL_video.h"
 #include <SDL3/SDL.h>
 #include <iostream>
 
-void cleanup(SDL_Window *win);
+
+struct SDLState
+{
+    SDL_Window *window;
+    SDL_Renderer *renderer;
+};
+
+void cleanup(SDLState& state);
 
 int main()
 {
+    SDLState state;
+
     if (!SDL_Init(SDL_INIT_VIDEO))
     {
         SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "Error", "Error initializing SDL3", nullptr);
@@ -19,12 +29,21 @@ int main()
     // create the window
     constexpr int width = 800;
     constexpr int height = 600;
-    SDL_Window *win = SDL_CreateWindow("SDL3 Demo", width, height, 0);
+    state.window = SDL_CreateWindow("SDL3 Demo", width, height, 0);
 
-    if (!win)
+    if (!state.window)
     {
-        SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "Error", "Error creating window", win);
-        cleanup(win);
+        SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "Error", "Error creating window", nullptr);
+        cleanup(state);
+        return 1;
+    }
+
+    // create renderer
+    state.renderer = SDL_CreateRenderer(state.window, nullptr);
+    if (!state.renderer)
+    {
+        SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "Error", "Error creating renderer", nullptr);
+        cleanup(state);
         return 1;
     }
 
@@ -42,15 +61,21 @@ int main()
                     break;
             }
         }
+
+        // perform drawing commands
+        SDL_SetRenderDrawColor(state.renderer, 255, 255, 255, 255);
+        SDL_RenderClear(state.renderer);
+        SDL_RenderPresent(state.renderer);
     }
 
-    cleanup(win);
+    cleanup(state);
 
     return 0;
 }
 
-void cleanup(SDL_Window *win)
+void cleanup(SDLState& state)
 {
-    SDL_DestroyWindow(win);
+    SDL_DestroyRenderer(state.renderer);
+    SDL_DestroyWindow(state.window);
     SDL_Quit();
 }
