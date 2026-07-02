@@ -45,6 +45,7 @@ struct GameObject
     int currentAnimation;
     SDL_Texture *texture;
     bool dynamic;
+    bool grounded;
     SDL_FRect collider;
 
 
@@ -57,5 +58,6 @@ struct GameObject
         currentAnimation = -1;
         texture = nullptr;
         dynamic = false;
+        grounded = true;
     }
 };
