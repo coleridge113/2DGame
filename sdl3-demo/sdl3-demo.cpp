@@ -63,6 +63,9 @@ struct Resources {
     const int ANIM_PLAYER_IDLE = 0;
     const int ANIM_PLAYER_RUN = 1;
     const int ANIM_PLAYER_SLIDE = 2;
+    const int ANIM_PLAYER_SHOOT = 3;
+    const int ANIM_PLAYER_SLIDE_SHOOT = 4;
+
     std::vector<Animation> playerAnims;
 
     const int ANIM_BULLET_MOVING = 0;
@@ -71,7 +74,9 @@ struct Resources {
 
     std::vector<SDL_Texture *> textures;
     SDL_Texture *texIdle, *texRun, *texBrick, *texGrass, *texGround, *texPanel, 
-                *texSlide, *texBg1, *texBg2, *texBg3, *texBg4, *texBullet, *texBulletHit;
+                *texSlide, *texBg1, *texBg2, *texBg3, *texBg4, *texBullet, *texBulletHit,
+                *texShoot, *texRunShoot, *texSlideShoot
+                ;
 
     SDL_Texture *loadTexture(SDL_Renderer *renderer, const std::string &filepath)
     {
@@ -87,6 +92,8 @@ struct Resources {
         playerAnims[ANIM_PLAYER_IDLE] = Animation(8, 1.6f);
         playerAnims[ANIM_PLAYER_RUN] = Animation(4, 0.5f);
         playerAnims[ANIM_PLAYER_SLIDE] = Animation(1, 1.0f);
+        playerAnims[ANIM_PLAYER_SHOOT] = Animation(4, 0.5f);
+        playerAnims[ANIM_PLAYER_SLIDE_SHOOT] = Animation(4, 0.5f);
 
         bulletAnims.resize(2);
         bulletAnims[ANIM_BULLET_MOVING] = Animation(4, 0.05f);
@@ -105,6 +112,9 @@ struct Resources {
         texBg4 = loadTexture(state.renderer, "data/bg/bg_layer4.png");
         texBullet = loadTexture(state.renderer, "data/bullet.png");
         texBulletHit = loadTexture(state.renderer, "data/bullet_hit.png");
+        texShoot = loadTexture(state.renderer, "data/shoot.png");
+        texRunShoot = loadTexture(state.renderer, "data/shoot_run.png");
+        texSlideShoot = loadTexture(state.renderer, "data/slide_shoot.png");
     }
 
     void unload()
@@ -273,9 +283,11 @@ int main()
         SDL_SetRenderDrawColor(state.renderer, 255, 255, 255, 255);
         SDL_RenderDebugText(state.renderer, 5, 5, 
                 std::format("S: {}, B: {}, G: {}", 
-                    static_cast<int>(gs.getPlayer().data.player.state), gs.bullets.size(), gs.getPlayer().grounded).c_str()
-
-                );
+                    static_cast<int>(gs.getPlayer().data.player.state), 
+                    gs.bullets.size(), 
+                    gs.getPlayer().grounded
+                ).c_str()
+            );
 
         // swap buffers and present
         SDL_RenderPresent(state.renderer);
@@ -374,6 +386,53 @@ void update(const SDLState& state, GameState& gs, Resources& res, GameObject& ob
 
         Timer& weaponTimer = obj.data.player.weaponTimer;
         weaponTimer.step(deltaTime);
+
+        const auto handleShooting = [&state, &gs, &res, &obj, &weaponTimer](
+            SDL_Texture* tex, SDL_Texture* shootTex, int animIndex, int shootAnimIndex)
+        {
+            if (state.keys[SDL_SCANCODE_J])
+            {
+                // set shooting tex/anim
+                obj.texture = shootTex;
+                obj.currentAnimation = shootAnimIndex;
+
+                if (weaponTimer.isTimeout())
+                {
+                    weaponTimer.reset();
+                    GameObject bullet;
+                    bullet.type = ObjectType::bullet;
+                    bullet.direction = gs.getPlayer().direction;
+                    bullet.texture = res.texBullet;
+                    bullet.currentAnimation = res.ANIM_BULLET_MOVING;
+                    bullet.collider = SDL_FRect{
+                        .x = 0, .y = 0,
+                        .w = static_cast<float>(res.texBullet->h),
+                        .h = static_cast<float>(res.texBullet->h)
+                    };
+                    bullet.velocity = glm::vec2(
+                            obj.velocity.x + 600.0f * obj.direction,
+                            0
+                            );
+                    bullet.animations = res.bulletAnims;
+
+                    // adjust bullet start position
+                    const float left = 4;
+                    const float right = 24;
+                    const float t = (obj.direction + 1) / 2.0f;
+                    const float xOffset = left + right * t;
+                    bullet.position = glm::vec2(
+                            obj.position.x + xOffset,
+                            obj.position.y + TILE_SIZE / 2 + 1
+                            );
+                    gs.bullets.push_back(bullet);
+                }
+            }
+            else 
+            {
+                obj.texture = tex;
+                obj.currentAnimation = animIndex;
+            }
+        };
          
         switch (obj.data.player.state)
         {
@@ -400,42 +459,7 @@ void update(const SDLState& state, GameState& gs, Resources& res, GameObject& ob
                     }
                 }
 
-                // spawn bullets
-                if (state.keys[SDL_SCANCODE_J])
-                {
-                    if (weaponTimer.isTimeout())
-                    {
-                        weaponTimer.reset();
-                        GameObject bullet;
-                        bullet.type = ObjectType::bullet;
-                        bullet.direction = gs.getPlayer().direction;
-                        bullet.texture = res.texBullet;
-                        bullet.currentAnimation = res.ANIM_BULLET_MOVING;
-                        bullet.collider = SDL_FRect{
-                            .x = 0, .y = 0,
-                            .w = static_cast<float>(res.texBullet->h),
-                            .h = static_cast<float>(res.texBullet->h)
-                        };
-                        bullet.velocity = glm::vec2(
-                                obj.velocity.x + 600.0f * obj.direction,
-                                0
-                                );
-                        bullet.animations = res.bulletAnims;
-
-                        // adjust bullet start position
-                        const float left = 4;
-                        const float right = 24;
-                        const float t = (obj.direction + 1) / 2.0f;
-                        const float xOffset = left + right * t;
-                        bullet.position = glm::vec2(
-                                obj.position.x + xOffset,
-                                obj.position.y + TILE_SIZE / 2 + 1
-                                );
-                        gs.bullets.push_back(bullet);
-                    }
-                }
-                obj.texture = res.texIdle;
-                obj.currentAnimation = res.ANIM_PLAYER_IDLE;
+                handleShooting(res.texIdle, res.texShoot, res.ANIM_PLAYER_IDLE, res.ANIM_PLAYER_SHOOT);
 
                 break;
             }
@@ -447,15 +471,14 @@ void update(const SDLState& state, GameState& gs, Resources& res, GameObject& ob
                     obj.data.player.state = PlayerState::idle;
                 }
 
+
                 if (obj.velocity.x * obj.direction < 0 && obj.grounded)
                 {
-                    obj.texture = res.texSlide;
-                    obj.currentAnimation = res.ANIM_PLAYER_SLIDE;
+                    handleShooting(res.texSlide, res.texSlideShoot, res.ANIM_PLAYER_SLIDE, res.ANIM_PLAYER_SLIDE_SHOOT);
                 }
                 else
                 {
-                    obj.texture = res.texRun;
-                    obj.currentAnimation = res.ANIM_PLAYER_RUN;
+                    handleShooting(res.texRun, res.texRunShoot, res.ANIM_PLAYER_RUN, res.ANIM_PLAYER_RUN);
                 }
 
                 break; 
@@ -464,8 +487,7 @@ void update(const SDLState& state, GameState& gs, Resources& res, GameObject& ob
             case PlayerState::jumping: 
             {
 
-                obj.texture = res.texRun;
-                obj.currentAnimation = res.ANIM_PLAYER_RUN;
+                handleShooting(res.texRun, res.texRunShoot, res.ANIM_PLAYER_RUN, res.ANIM_PLAYER_RUN);
 
                 break;
             }
@@ -731,11 +753,11 @@ void handleKeyInput(const SDLState& state, GameState& gs, GameObject& obj, SDL_S
             case PlayerState::jumping:
             {
                 // temporary code
-                if (!obj.velocity.y)
-                {
-                    obj.data.player.state = PlayerState::idle;
-                }
-                break;
+                // if (!obj.velocity.y)
+                // {
+                //     obj.data.player.state = PlayerState::idle;
+                // }
+                // break;
                 // temporary code
             }
 
