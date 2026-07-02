@@ -44,6 +44,7 @@ struct GameState
     int playerIndex;
     SDL_FRect mapViewPort;
     float bg2Scroll, bg3Scroll, bg4Scroll;
+    bool debugMode;
 
     GameState(const SDLState& state)
     {
@@ -54,6 +55,7 @@ struct GameState
             .h = static_cast<float>(state.logH)
         };
         bg2Scroll = bg3Scroll = bg4Scroll = 0;
+        debugMode = false;
     }
 
     GameObject& getPlayer() { return layers[LAYER_IDX_CHARACTERS][playerIndex]; }
@@ -198,6 +200,10 @@ int main()
                 case SDL_EVENT_KEY_UP:
                 {
                     handleKeyInput(state, gs, gs.getPlayer(), event.key.scancode, false);
+                    if (event.key.scancode == SDL_SCANCODE_F12)
+                    {
+                        gs.debugMode = !gs.debugMode;
+                    }
                     break;
                 }
             }
@@ -280,14 +286,17 @@ int main()
         }
 
         // display debug info
-        SDL_SetRenderDrawColor(state.renderer, 255, 255, 255, 255);
-        SDL_RenderDebugText(state.renderer, 5, 5, 
-                std::format("S: {}, B: {}, G: {}", 
-                    static_cast<int>(gs.getPlayer().data.player.state), 
-                    gs.bullets.size(), 
-                    gs.getPlayer().grounded
-                ).c_str()
-            );
+        if (gs.debugMode)
+        {
+            SDL_SetRenderDrawColor(state.renderer, 255, 255, 255, 255);
+            SDL_RenderDebugText(state.renderer, 5, 5, 
+                    std::format("S: {}, B: {}, G: {}", 
+                        static_cast<int>(gs.getPlayer().data.player.state), 
+                        gs.bullets.size(), 
+                        gs.getPlayer().grounded
+                    ).c_str()
+                );
+        }
 
         // swap buffers and present
         SDL_RenderPresent(state.renderer);
