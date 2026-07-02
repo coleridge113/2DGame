@@ -542,9 +542,10 @@ void update(const SDLState& state, GameState& gs, Resources& res, GameObject& ob
                 checkCollision(state, gs, res, obj, objB, deltaTime);
 
                 SDL_FRect sensor{
-                    .x = obj.position.x + obj.collider.x,
+                    .x = obj.position.x + obj.collider.x + 2.0f,
                     .y = obj.position.y + obj.collider.y + obj.collider.h,
-                    .w = obj.collider.w, .h = 1
+                    .w = obj.collider.w - 4.0f, 
+                    .h = 1
                 };
 
                 SDL_FRect rectB{
