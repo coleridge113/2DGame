@@ -39,10 +39,16 @@ struct GameState
 {
     std::array<std::vector<GameObject>, 2> layers;
     int playerIndex;
+    SDL_FRect mapViewPort;
 
-    GameState()
+    GameState(const SDLState& state)
     {
         playerIndex = -1;
+        mapViewPort = SDL_FRect{
+            .x = 0, .y = 0, 
+            .w = static_cast<float>(state.logW), 
+            .h = static_cast<float>(state.logH)
+        };
     }
 
     GameObject& getPlayer() { return layers[LAYER_IDX_CHARACTERS][playerIndex]; }
@@ -122,7 +128,7 @@ int main()
     res.load(state);
 
     // setup game data
-    GameState gs;
+    GameState gs{ state };
     createTiles(state, gs, res);
 
     uint64_t prevTime = SDL_GetTicks();
@@ -183,6 +189,9 @@ int main()
             }
         }
 
+        gs.mapViewPort.x = (gs.getPlayer().position.x + TILE_SIZE / 2) - gs.mapViewPort.w / 2;
+
+        // perform drawing commands
         SDL_SetRenderDrawColor(state.renderer, 255, 255, 255, 255);
         SDL_RenderDebugText(state.renderer, 5, 5, 
                 std::format("State: {}", static_cast<int>(gs.getPlayer().data.player.state)).c_str()
@@ -258,7 +267,7 @@ void drawObject(const SDLState& state, GameState& gs, GameObject& obj, float del
     };
 
     SDL_FRect dst{
-        .x = obj.position.x,
+        .x = obj.position.x - gs.mapViewPort.x,
         .y = obj.position.y,
         .w = spriteSize,
         .h = spriteSize
@@ -473,11 +482,11 @@ void createTiles(const SDLState& state, GameState& gs, const Resources& res)
      * 6 - Brick
      */
     short map[MAP_ROWS][MAP_COLS] = { 
-        0, 4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
+        0, 0, 0, 0, 4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
-        0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
-        0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
-        1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
+        0, 0, 0, 0, 2, 0, 0, 0, 2, 2, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
+        0, 0, 0, 0, 0, 0, 0, 2, 2, 2, 2, 0, 0, 2, 2, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
+        1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
     };
 
     const auto createObject = [&state](int r, int c, SDL_Texture *tex, ObjectType type)
