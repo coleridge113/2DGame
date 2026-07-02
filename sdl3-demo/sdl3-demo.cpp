@@ -272,7 +272,9 @@ int main()
         // display debug info
         SDL_SetRenderDrawColor(state.renderer, 255, 255, 255, 255);
         SDL_RenderDebugText(state.renderer, 5, 5, 
-                std::format("State: {}", static_cast<int>(gs.getPlayer().data.player.state)).c_str()
+                std::format("S: {}, B: {}, G: {}", 
+                    static_cast<int>(gs.getPlayer().data.player.state), gs.bullets.size(), gs.getPlayer().grounded).c_str()
+
                 );
 
         // swap buffers and present
@@ -427,7 +429,7 @@ void update(const SDLState& state, GameState& gs, Resources& res, GameObject& ob
                         const float xOffset = left + right * t;
                         bullet.position = glm::vec2(
                                 obj.position.x + xOffset,
-                                obj.position.y + TILE_SIZE / 2
+                                obj.position.y + TILE_SIZE / 2 + 1
                                 );
                         gs.bullets.push_back(bullet);
                     }
