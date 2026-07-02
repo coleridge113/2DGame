@@ -40,6 +40,7 @@ struct GameState
     std::array<std::vector<GameObject>, 2> layers;
     int playerIndex;
     SDL_FRect mapViewPort;
+    float bg2Scroll, bg3Scroll, bg4Scroll;
 
     GameState(const SDLState& state)
     {
@@ -49,6 +50,7 @@ struct GameState
             .w = static_cast<float>(state.logW), 
             .h = static_cast<float>(state.logH)
         };
+        bg2Scroll = bg3Scroll = bg4Scroll = 0;
     }
 
     GameObject& getPlayer() { return layers[LAYER_IDX_CHARACTERS][playerIndex]; }
@@ -61,7 +63,7 @@ struct Resources {
     std::vector<Animation> playerAnims;
     std::vector<SDL_Texture *> textures;
     SDL_Texture *texIdle, *texRun, *texBrick, *texGrass, *texGround, *texPanel, 
-                *texSlide;
+                *texSlide, *texBg1, *texBg2, *texBg3, *texBg4;
 
     SDL_Texture *loadTexture(SDL_Renderer *renderer, const std::string &filepath)
     {
@@ -85,6 +87,10 @@ struct Resources {
         texGrass = loadTexture(state.renderer, "data/tiles/grass.png");
         texGround = loadTexture(state.renderer, "data/tiles/ground.png");
         texPanel = loadTexture(state.renderer, "data/tiles/panel.png");
+        texBg1 = loadTexture(state.renderer, "data/bg/bg_layer1.png");
+        texBg2 = loadTexture(state.renderer, "data/bg/bg_layer2.png");
+        texBg3 = loadTexture(state.renderer, "data/bg/bg_layer3.png");
+        texBg4 = loadTexture(state.renderer, "data/bg/bg_layer4.png");
     }
 
     void unload()
@@ -108,6 +114,8 @@ void collisionResponse(
         GameObject& a, GameObject& b, float deltaTime
         );
 void handleKeyInput(const SDLState& state, GameState& gs, GameObject& obj, SDL_Scancode key, bool keydown);
+void drawParallaxBackground(SDL_Renderer* renderer, SDL_Texture* texture,
+        float xVelocity, float& scrollPos, float scrollFactor, float deltaTime);
 
 
 int main()
@@ -175,6 +183,24 @@ int main()
         SDL_SetRenderDrawColor(state.renderer, 20, 10, 30, 255);
         SDL_RenderClear(state.renderer);
 
+        // calculate viewport positions
+        gs.mapViewPort.x = (gs.getPlayer().position.x + TILE_SIZE / 2) - gs.mapViewPort.w / 2;
+
+        // perform drawing commands
+        SDL_SetRenderDrawColor(state.renderer, 255, 255, 255, 255);
+        SDL_RenderDebugText(state.renderer, 5, 5, 
+                std::format("State: {}", static_cast<int>(gs.getPlayer().data.player.state)).c_str()
+                );
+
+        // draw background images
+        SDL_RenderTexture(state.renderer, res.texBg1, nullptr, nullptr);
+        drawParallaxBackground(state.renderer, res.texBg4, gs.getPlayer().velocity.x, 
+                gs.bg4Scroll, 0.075f, deltaTime);
+        drawParallaxBackground(state.renderer, res.texBg3, gs.getPlayer().velocity.x, 
+                gs.bg3Scroll, 0.15f, deltaTime);
+        drawParallaxBackground(state.renderer, res.texBg2, gs.getPlayer().velocity.x, 
+                gs.bg2Scroll, 0.3f, deltaTime);
+
         // update and draw all objects
         for (auto& layer : gs.layers)
         {
@@ -188,14 +214,6 @@ int main()
                 drawObject(state, gs, obj, deltaTime);
             }
         }
-
-        gs.mapViewPort.x = (gs.getPlayer().position.x + TILE_SIZE / 2) - gs.mapViewPort.w / 2;
-
-        // perform drawing commands
-        SDL_SetRenderDrawColor(state.renderer, 255, 255, 255, 255);
-        SDL_RenderDebugText(state.renderer, 5, 5, 
-                std::format("State: {}", static_cast<int>(gs.getPlayer().data.player.state)).c_str()
-                );
 
         // swap buffers and present
         SDL_RenderPresent(state.renderer);
@@ -482,10 +500,10 @@ void createTiles(const SDLState& state, GameState& gs, const Resources& res)
      * 6 - Brick
      */
     short map[MAP_ROWS][MAP_COLS] = { 
-        0, 0, 0, 0, 4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
-        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
-        0, 0, 0, 0, 2, 0, 0, 0, 2, 2, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
-        0, 0, 0, 0, 0, 0, 0, 2, 2, 2, 2, 0, 0, 2, 2, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
+        2, 0, 0, 0, 4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
+        2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
+        2, 0, 0, 0, 2, 0, 0, 0, 2, 2, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
+        2, 0, 0, 0, 0, 0, 0, 2, 2, 2, 2, 0, 0, 2, 2, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
         1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
     };
 
@@ -577,4 +595,22 @@ void handleKeyInput(const SDLState& state, GameState& gs, GameObject& obj, SDL_S
 
         }
     }
+}
+
+void drawParallaxBackground(SDL_Renderer* renderer, SDL_Texture* texture,
+        float xVelocity, float& scrollPos, float scrollFactor, float deltaTime)
+{
+    scrollPos -= xVelocity * scrollFactor * deltaTime;
+    if (scrollPos <= -texture->w)
+    {
+        scrollPos = 0;
+    }
+    
+    SDL_FRect dst{
+        .x = scrollPos, .y = 40,
+        .w = texture->w * 2.0f, 
+        .h = static_cast<float>(texture->h)
+    };
+    
+    SDL_RenderTextureTiled(renderer, texture, nullptr, 1, &dst);
 }
