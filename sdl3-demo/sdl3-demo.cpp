@@ -379,11 +379,31 @@ void drawObject(const SDLState& state, GameState& gs, GameObject& obj,
     SDL_FlipMode flipMode = obj.direction == -1 ? SDL_FLIP_HORIZONTAL : SDL_FLIP_NONE;
     SDL_RenderTextureRotated(state.renderer, obj.texture, &src, &dst, 0, nullptr, flipMode);
 
+    if (gs.debugMode)
+    {
+        SDL_FRect rectA{
+            .x = obj.position.x + obj.collider.x - gs.mapViewPort.x, 
+            .y = obj.position.y + obj.collider.y,
+            .w = obj.collider.w, 
+            .h = obj.collider.h
+        };
+
+        SDL_SetRenderDrawBlendMode(state.renderer, SDL_BLENDMODE_BLEND);
+        SDL_SetRenderDrawColor(state.renderer, 255, 0, 0, 150);
+        SDL_RenderFillRect(state.renderer, &rectA);
+        SDL_SetRenderDrawBlendMode(state.renderer, SDL_BLENDMODE_NONE);
+    }
+
 }
 
 void update(const SDLState& state, GameState& gs, Resources& res, GameObject& obj, float deltaTime)
 {
-    if (obj.dynamic)
+    if (obj.currentAnimation != -1)
+    {
+        obj.animations[obj.currentAnimation].step(deltaTime);
+    }
+
+    if (obj.dynamic && !obj.grounded)
         obj.velocity += glm::vec2(0, 500) * deltaTime;
 
     if (obj.type == ObjectType::player)
@@ -533,7 +553,9 @@ void update(const SDLState& state, GameState& gs, Resources& res, GameObject& ob
                     .w = objB.collider.w, .h = objB.collider.h
                 };
 
-                if (SDL_HasRectIntersectionFloat(&sensor, &rectB))
+                SDL_FRect rectC{ 0 };
+
+                if (SDL_GetRectIntersectionFloat(&sensor, &rectB, &rectC))
                 {
                     foundGround = true;
                 }
