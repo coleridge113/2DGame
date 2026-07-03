@@ -403,15 +403,18 @@ void update(const SDLState& state, GameState& gs, Resources& res, GameObject& ob
         obj.animations[obj.currentAnimation].step(deltaTime);
     }
 
+
     if (obj.dynamic && !obj.grounded)
+    {
         obj.velocity += glm::vec2(0, 500) * deltaTime;
+    }
+
+    float currentDirection = 0;
 
     if (obj.type == ObjectType::player)
     {
-        float currentDirection = 0;
         if (state.keys[SDL_SCANCODE_A])     currentDirection += -1;
         if (state.keys[SDL_SCANCODE_D])     currentDirection += 1;
-        if (currentDirection)               obj.direction = currentDirection;
 
         Timer& weaponTimer = obj.data.player.weaponTimer;
         weaponTimer.step(deltaTime);
@@ -429,6 +432,7 @@ void update(const SDLState& state, GameState& gs, Resources& res, GameObject& ob
                 {
                     weaponTimer.reset();
                     GameObject bullet;
+                    bullet.data.bullet = BulletData();
                     bullet.type = ObjectType::bullet;
                     bullet.direction = gs.getPlayer().direction;
                     bullet.texture = res.texBullet;
@@ -443,6 +447,7 @@ void update(const SDLState& state, GameState& gs, Resources& res, GameObject& ob
                             0
                             );
                     bullet.animations = res.bulletAnims;
+                    bullet.maxSpeedX = 1000.0f;
 
                     // adjust bullet start position
                     const float left = 4;
@@ -453,7 +458,22 @@ void update(const SDLState& state, GameState& gs, Resources& res, GameObject& ob
                             obj.position.x + xOffset,
                             obj.position.y + TILE_SIZE / 2 + 1
                             );
-                    gs.bullets.push_back(bullet);
+
+                    // look for inactive slot and overwrite the bullet 
+                    bool foundInactive = false;
+                    for (int i = 0; i < gs.bullets.size() && !foundInactive; ++i)
+                    {
+                        if (gs.bullets[i].data.bullet.state == BulletState::inactive)
+                        {
+                            foundInactive = true;
+                            gs.bullets[i] = bullet;
+                        }
+                    }
+                    // if no inactive slot found, push new bullet
+                    if (!foundInactive)
+                    {
+                        gs.bullets.push_back(bullet);
+                    }
                 }
             }
             else 
@@ -522,10 +542,29 @@ void update(const SDLState& state, GameState& gs, Resources& res, GameObject& ob
             }
         }
 
-        // add acceleration to velocity
-        obj.velocity += currentDirection * obj.acceleration * deltaTime;
-        if (std::abs(obj.velocity.x) > obj.maxSpeedX)
-            obj.velocity.x = currentDirection * obj.maxSpeedX;
+    }
+    else if (obj.type == ObjectType::bullet)
+    {
+        if (obj.position.x - gs.mapViewPort.x < 0 || // left edge
+            obj.position.x - gs.mapViewPort.x > state.logW || // right edge
+            obj.position.y - gs.mapViewPort.y < 0 || // top edge
+            obj.position.y - gs.mapViewPort.y > state.logH // bottom edge
+            )
+        {
+            obj.data.bullet.state = BulletState::inactive;
+        }
+    }
+
+    if (currentDirection)               
+    { 
+        obj.direction = currentDirection; 
+    }
+
+    // add acceleration to velocity
+    obj.velocity += currentDirection * obj.acceleration * deltaTime;
+    if (std::abs(obj.velocity.x) > obj.maxSpeedX)
+    {
+        obj.velocity.x = currentDirection * obj.maxSpeedX;
     }
 
     // add velocity position
@@ -578,43 +617,58 @@ void collisionResponse(const SDLState& state, GameState& gs, Resources& res,
         const SDL_FRect& rectA, const SDL_FRect& rectB, const SDL_FRect& rectC,
         GameObject& a, GameObject& b, float deltaTime)
 {
+    const auto genericResponse = [&]()
+    {
+        if (rectC.w < rectC.h)
+        {
+            if (a.velocity.x > 0) // going right
+            {
+                a.position.x -= rectC.w;
+            }
+            else if (a.velocity.x < 0) // going left
+            {
+                a.position.x += rectC.w;
+            }
+            a.velocity.x = 0;
+        }
+        else 
+        {
+            // vertical collision
+            if (a.velocity.y > 0) // going down
+            {
+                a.position.y -= rectC.h;
+            }
+            else if (a.velocity.y < 0)// going up
+            {
+                a.position.y += rectC.h;
+            }
+            a.velocity.y = 0;
+        }
+    };
+
     if (a.type == ObjectType::player)
     {
         switch (b.type)
         {
             case ObjectType::level:
             {
-                // horizontal collision
-                if (rectC.w < rectC.h)
-                {
-                    if (a.velocity.x > 0) // going right
-                    {
-                        a.position.x -= rectC.w + 0.1f;
-                    }
-                    else if (a.velocity.x < 0) // going left
-                    {
-                        a.position.x += rectC.w;
-                    }
-                    a.velocity.x = 0;
-                }
-                else 
-                {
-                    // vertical collision
-                    if (a.velocity.y > 0) // going down
-                    {
-                        a.position.y -= rectC.h;
-                    }
-                    else if (a.velocity.y < 0)// going up
-                    {
-                        a.position.y += rectC.h;
-                    }
-                    a.velocity.y = 0;
-                }
+                genericResponse();
                 break;
             }
             
             case ObjectType::player:    break;
             case ObjectType::enemy:     break;
+        }
+    }
+    else if (a.type == ObjectType::bullet)
+    {
+        switch (a.data.bullet.state)
+        {
+            case BulletState::moving:
+            {
+                genericResponse();
+                break;
+            }
         }
     }
 }
